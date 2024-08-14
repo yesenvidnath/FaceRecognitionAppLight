@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Take a Photo</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #343a40;
+            color: white;
+        }
+
+        .photo-container {
+            max-width: 700px;
+            width: 100%;
+            padding: 20px;
+            background-color: #495057;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        video {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 2px solid #6c757d;
+        }
+
+        #capture {
+            font-size: 1.2rem;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+        }
+
+        #result {
+            margin-top: 20px;
+            font-size: 1.1rem;
+            color: #ced4da;
+        }
+    </style>
+</head>
+<body>
+
+<div class="photo-container">
+    <h2 class="mb-4">Take a Photo</h2>
+    <video id="video" autoplay></video>
+    <button id="capture" class="btn btn-primary">Capture</button>
+    <div id="result"></div>
+</div>
+
+<script>
+    const video = document.getElementById('video');
+    const captureButton = document.getElementById('capture');
+    const result = document.getElementById('result');
+
+    // Get access to the camera
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(function(stream) {
+                video.srcObject = stream;
+                video.play();
+            })
+            .catch(function(error) {
+                console.log("Something went wrong!", error);
+            });
+    }
+
+    // Capture the photo
+    captureButton.addEventListener('click', function() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 640;
+        canvas.height = 480;
+        const context = canvas.getContext('2d');
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const data = canvas.toDataURL('image/jpeg');
+
+        fetch('/take_photo', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({image: data})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message === "Photo taken and saved") {
+                // Redirect to face recognition after successful image capture
+                window.location.href = "/face_recognition";
+            } else {
+                result.innerHTML = 'Error saving photo: ' + data.message;
+            }
+        })
+        .catch(error => {
+            console.log('Error:', error);
+            result.innerHTML = 'Error taking photo.';
+        });
+    });
+</script>
+
+<!-- Bootstrap 5 JS and dependencies -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
