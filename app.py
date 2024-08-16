@@ -85,7 +85,6 @@ def process_image():
                 return jsonify({"match": name, "confidence": 1 - face_distances[best_match_index], "date": pd.Timestamp.now().strftime('%Y-%m-%d')})
 
         return jsonify({"message": "No matching face found"})
-
     except Exception as e:
         return jsonify({"message": f"Internal server error: {str(e)}"}), 500
 
@@ -172,6 +171,4 @@ def face_recognition():
     return render_template('face_recognition.html')
 
 if __name__ == '__main__':
-    # Use the PORT environment variable if available, otherwise default to 6969
-    port = int(os.environ.get('PORT', 6969))
-    app.run(host='0.0.0.0', port=port)
+    app.run(debug=False)  # debug=False for production
