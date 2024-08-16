@@ -6,9 +6,16 @@ from base64 import b64decode
 from io import BytesIO
 import openpyxl
 import os
+import requests
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
+
+# API details for validating QR code
+API_URL = "https://api.northstar.mv/api/gym-access/qr"
+API_HEADERS = {
+    "Authorization": "Bearer aBcDeFgHiJkLmNoP"
+}
 
 # Load names and image paths from Excel
 data_dir = 'faces'
@@ -132,10 +139,24 @@ def direct_face_recognition():
 def index():
     if request.method == 'POST':
         qr_code = request.get_json().get('code')
-        # Here should be the code to validate QR and respond with relevant redirection
-        # Assuming verification logic here...
 
-        return jsonify({"redirect": url_for('take_photo')})
+        # Send the QR code to the API for validation
+        try:
+            response = requests.post(API_URL, headers=API_HEADERS, json={"QR": qr_code})
+
+            if response.status_code == 200:
+                api_response = response.json()
+                if api_response.get('QR') and api_response.get('FID'):
+                    return jsonify({"redirect": url_for('take_photo')})
+                elif api_response.get('QR') and not api_response.get('FID'):
+                    session['verified'] = True
+                    return jsonify({"redirect": url_for('face_recognition')})
+                else:
+                    return jsonify({"message": "Invalid QR code"})
+            else:
+                return jsonify({"message": "Failed to verify QR code"})
+        except Exception as e:
+            return jsonify({"message": f"Internal server error: {str(e)}"}), 500
 
     return render_template('index.html')
 
@@ -151,4 +172,6 @@ def face_recognition():
     return render_template('face_recognition.html')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Use the PORT environment variable if available, otherwise default to 6969
+    port = int(os.environ.get('PORT', 6969))
+    app.run(host='0.0.0.0', port=port)
